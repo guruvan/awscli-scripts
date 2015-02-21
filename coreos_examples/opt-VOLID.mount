@@ -1,0 +1,13 @@
+[Unit]
+Description=Mount vol-899a1186  to /opt/899a1186
+Requires=attach-ebs@899a1186.service
+After=attach-ebs@899a1186.service
+BindsTo=attach-ebs@899a1186.service
+[Mount]
+EnvironmentFile=/etc/mount-899a1186.env
+What=$VOLUME_DEVICE
+Where=/opt/899a1186
+Type=ext4
+[X-Fleet]
+MachineOf=attach-ebs@899a11986.service
+MachineMetadata="srv=dev" "data=1"

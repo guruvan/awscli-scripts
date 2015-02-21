@@ -1,0 +1,26 @@
+[Unit]
+Description=Attach EBS volume %i Start Data Container data on vol-%i
+Before=opt-%i.mount
+[Service]
+RemainAfterExit=yes
+Environment="VOLID=%i"
+EnvironmentFile=/etc/instance-id.env
+TimeoutStartSec=900
+#Restart=on-failure
+#RestartSec=60s
+User=root
+Type=oneshot
+ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin ibuildthecloud/systemd-docker
+ExecStartPre=/bin/sh -c 'test -d /opt/%i || mkdir -pv /opt/%i'
+#ExecStartPre=/opt/bin/systemd-docker run --rm -v /etc:/tmp -v /tmp:/data -e "VOL=vol-%i" --net host guruvan/ebs-detach /app/ebs-migrate.sh
+
+ExecStart=/opt/bin/systemd-docker run --rm -v /etc:/tmp shastafareye/ebs-tool --env-file /tmp/mount-%i.env attach vol-%i
+ExecStartPost=/bin/sh -c 'source /etc/instance-id.env ; /usr/bin/etcdctl set /disks/%i \{\\"instance\\":\\"$INSTANCE_ID\\"\}'
+ExecStop=/usr/bin/docker run --rm   -v /etc:/tmp  shastafareye/ebs-tool --env-file /tmp/mount-%i.env detach vol-%i
+ExecStopPost=/bin/sh -c 'set -x; rm -v /etc/mount-%i.env'
+ExecStopPost=/usr/bin/etcdctl rm /disks/%i
+ExecStopPost=/bin/sh -c 'set -x; test -d /opt/%i && rmdir  -v /opt/%i'
+TimeoutStopSec=120
+[X-Fleet]
+Conflicts=%p@%i.service
+MachineMetadata="srv=dev" "data=1"
